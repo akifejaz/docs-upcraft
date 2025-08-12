@@ -1,0 +1,8 @@
+title: Upcraft AI
+description: "Smart filters and insights for Upwork"
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+markdown: kramdown
+highlighter: rouge
