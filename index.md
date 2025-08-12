@@ -20,7 +20,7 @@ Upcraft AI is a lightweight Chrome (MV3) extension that upgrades your Upwork job
 ### Latest Release
 > **Note**: This section will be automatically updated when using GitHub Actions workflow.
 
-[![Download Latest](https://img.shields.io/github/v/release/akifejaz/upcraft?style=for-the-badge&logo=github&logoColor=white)](https://github.com/akifejaz/upcraft/releases/latest)
+[![Latest Release](https://badgen.net/github/release/akifejaz/upcraft)](https://github.com/akifejaz/upcraft/releases/latest)
 
 **Quick Download Links:**
 - [📦 Download Latest Release](https://github.com/akifejaz/upcraft/releases/latest/download/upcraft-extension-v1.0.0.zip)
