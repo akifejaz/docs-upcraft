@@ -7,9 +7,9 @@ Upcraft AI is a lightweight Chrome (MV3) extension that upgrades your Upwork job
 - **Draggable + remembers position**: Panel and floating icon persist their last location.
 - **Modern UI**: Dark/light aware, glassy surfaces, inline input labels.
 - **Quick filters**:
-  - Max age (hours)
+  - Job Posted (minutes)
   - Min spend (USD)
-  - # of proposals (applies Upwork’s native proposals filter via URL)
+  - No. of proposals 
 - **Job enrichment** (per job): Reviews, Client type (Individual/Company), Member since, Jobs posted, Hire rate, Last viewed, Hires.
 
 
@@ -20,16 +20,16 @@ Upcraft AI is a lightweight Chrome (MV3) extension that upgrades your Upwork job
 ### Latest Release
 > **Note**: This section will be automatically updated when using GitHub Actions workflow.
 
-[![Latest Release](https://badgen.net/github/release/akifejaz/upcraft)](https://github.com/akifejaz/upcraft/releases/latest)
+[![Latest Release](https://badgen.net/github/release/akifejaz/docs-upcraft)](https://github.com/akifejaz/docs-upcraft/releases/latest)
 
 **Quick Download Links:**
-- [📦 Download Latest Release](https://github.com/akifejaz/upcraft/releases/latest/download/upcraft-extension-v1.0.0.zip)
-- [📋 View All Releases](https://github.com/akifejaz/upcraft/releases)
-- [📖 Release Notes](https://github.com/akifejaz/upcraft/releases/latest)
+- [📦 Download Latest Release](https://github.com/akifejaz/docs-upcraft/releases/download/v1.1.0/upcraft-extension-v1.1.0.zip)
+- [📋 View All Releases](https://github.com/akifejaz/docs-upcraft/releases)
+- [📖 Release Notes](https://github.com/akifejaz/docs-upcraft/releases/latest)
 
 ### Alternative Download Methods
 
-1. **From Releases Page**: Visit our [releases page](https://github.com/akifejaz/upcraft/releases) to download any version
+1. **From Releases Page**: Visit our [releases page](https://github.com/akifejaz/docs-upcraft/releases) to download any version
 
 
 ## Screenshots
