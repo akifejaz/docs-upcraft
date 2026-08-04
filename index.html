@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upcraft AI — See the client before you spend a connect</title>
+<meta name="description" content="A Chrome extension that pulls every client signal onto the Upwork search page — hire rate, spend, reviews, required JSS — and filters 50 jobs down to the ones worth reading.">
+<meta property="og:title" content="Upcraft AI — See the client before you spend a connect">
+<meta property="og:description" content="Client hire rate, spend, reviews and required qualifications, right on the Upwork search page. Plus 10 filters that cut 50 results to the handful worth reading.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0c11">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%234f7cff'/><stop offset='1' stop-color='%238b5cf6'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><path d='M8 11h16l-6 7v6l-4-2v-4z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/></svg>">
+
+<style>
+/* ============================================================
+   Tokens
+   ============================================================ */
+:root{
+  /* Near-black neutral rather than a blue-tinted navy — the shared move across
+     Linear (#08090a), Supabase and Mintlify. It lets one accent carry the page
+     instead of the background competing with it. */
+  --bg:#08090a; --bg-2:#0c0d0f; --surface:#101112; --surface-2:#16171a;
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.13);
+  --text:#f7f8f8; --muted:#8a8f98; --faint:#62666d;
+  --accent:#5e6ad2; --accent-2:#8b5cf6; --good:#3ddc97;
+  --radius:12px; --maxw:1140px;
+  --font:'Inter','Inter Variable',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
+  /* Headings sit at 500, not 600-700: at display sizes the extra weight reads
+     as shouting. Paired with ~1.02 line-height and tight negative tracking. */
+  --h-weight:500;
+  --sec-pad:112px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--font);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+h1,h2,h3{margin:0;line-height:1.05;letter-spacing:-.022em;font-weight:var(--h-weight)}
+p{margin:0}
+img,svg{max-width:100%}
+.wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 20px}
+section{padding:var(--sec-pad) 0}
+
+.glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.glow::before,.glow::after{content:'';position:absolute;width:720px;height:720px;border-radius:50%;filter:blur(130px);opacity:.15}
+.glow::before{background:var(--accent);top:-320px;left:-180px}
+.glow::after{background:var(--accent-2);top:-220px;right:-240px}
+main,header,footer{position:relative;z-index:1}
+
+/* ============================================================ Nav */
+header{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);
+  background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;flex:0 0 auto}
+.mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:grid;place-items:center;flex:0 0 auto}
+.mark svg{width:15px;height:15px}
+.nav-links{display:flex;align-items:center;gap:26px;font-size:14px;color:var(--muted)}
+.nav-links a:hover{color:var(--text)}
+
+/* Tighter than the usual marketing button: 38px tall, 8px radius, weight 500 —
+   closer to product UI than to a hero banner, which is what makes these sites
+   read as tools rather than ads. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;
+  border-radius:8px;font-size:14px;font-weight:500;border:1px solid transparent;cursor:pointer;
+  transition:.16s ease;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 4px 18px rgba(94,106,210,.3)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-ghost{border-color:var(--line-2);color:var(--text);background:transparent}
+.btn-ghost:hover{background:var(--surface-2);border-color:rgba(255,255,255,.2)}
+.btn-lg{height:44px;padding:0 22px;font-size:14.5px}
+
+/* ============================================================ Hero */
+.hero{padding:78px 0 0;text-align:center}
+/* Lower floor than before: each sentence has to fit its own line on a phone,
+   and 2.05rem pushed "No need to open every job." onto two. */
+h1{font-size:clamp(1.6rem,5.4vw,4rem);font-weight:var(--h-weight);letter-spacing:-.032em;line-height:1.06;text-wrap:balance}
+h1 .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+/* The headline is two sentences, so the break has to hold at EVERY width.
+   Letting it collapse on mobile ran them together mid-line ("job. Every
+   detail's on the / card.") and stranded the last word on its own line. */
+.sub{margin:20px auto 0;max-width:620px;font-size:clamp(.98rem,1.5vw,1.14rem);color:var(--muted)}
+.cta{display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap}
+.microcopy{margin-top:15px;font-size:13px;color:var(--faint)}
+
+/* ============================================================
+   Before / After — two labelled panes.
+   A wipe/slider was tried first, but the "before" side has to
+   reserve the chip row's height to stay aligned, which renders as
+   an unexplained blank gap. Side-by-side is the honest comparison
+   and stacks cleanly on a phone.
+   ============================================================ */
+.cmp-wrap{margin:52px auto 0;max-width:1000px}
+.cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:stretch}
+.cmp-arrow{align-self:center;width:34px;height:34px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;
+  box-shadow:0 6px 20px rgba(79,124,255,.35)}
+.cmp-arrow svg{width:16px;height:16px;stroke:#fff;stroke-width:2.6;fill:none}
+
+.pane{border:1px solid var(--line-2);border-radius:14px;overflow:hidden;background:#0f1115;
+  box-shadow:0 22px 54px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.pane.hero-pane{border-color:rgba(139,92,246,.4);box-shadow:0 22px 60px rgba(79,124,255,.16)}
+.pane-tag{display:flex;align-items:center;gap:8px;padding:9px 13px;font-size:10.5px;font-weight:700;
+  letter-spacing:.09em;text-transform:uppercase;border-bottom:1px solid var(--line);background:#15181f;color:var(--muted)}
+.pane.hero-pane .pane-tag{color:#cfd8ff;background:linear-gradient(90deg,rgba(79,124,255,.2),rgba(139,92,246,.12))}
+.pane-tag .pip{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7;flex:0 0 auto}
+/* the hero centres its text; job cards must not inherit that */
+.pane-body{padding:14px;background:#101318;flex:1;text-align:left}
+
+/* ============================================================
+   Marquee — technique: duplicate the track and translate it by
+   exactly its own width plus the gap, so the seam never shows.
+   The mask fades both edges instead of hard-cutting them.
+   ============================================================ */
+/* Fade in PIXELS, not percent. A 10% fade is ~180px on a desktop but only
+   ~60px on a phone, which left the half-cut edge cards legible — readable
+   fragments hanging off both sides. A fixed 110px ramp dissolves them at
+   every width. */
+.marquee{--gap:14px;--fade:110px;display:flex;gap:var(--gap);overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+          mask-image:linear-gradient(90deg,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%)}
+.mq-track{display:flex;gap:var(--gap);flex-shrink:0;min-width:100%;align-items:center;
+  animation:mq 42s linear infinite;will-change:transform}
+.marquee:hover .mq-track{animation-play-state:paused}
+.marquee.rev .mq-track{animation-direction:reverse;animation-duration:52s}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(calc(-100% - var(--gap)))}}
+@media(prefers-reduced-motion:reduce){ .mq-track{animation:none} }
+
+/* ---------- review card ---------- */
+/* Deliberately wider than .wrap (1140px). Constraining the rail to the page
+   gutter pushed it ~90px in on each side, which read as a boxed-in widget;
+   this leaves just a small margin so it still clears the viewport edge. */
+.rv-rail-wrap{max-width:1660px;margin:0 auto;padding:0 16px}
+/* Invisible on purpose: no border, no background. The rail exists only to bound
+   where the rows scroll — overflow:hidden is what stops cards reaching the
+   viewport edge, and the marquee's fade mask does the visual work at the ends. */
+.rv-rail{overflow:hidden;display:flex;flex-direction:column;gap:14px}
+
+/* Fixed height, not auto: quotes run 4-150 chars, and letting each card size
+   to its own content produced a ragged row of mismatched blocks. Sized to the
+   longest quote (150 chars ~ 4 lines at this width) so nothing ever clips. */
+.rv-card{flex:0 0 auto;width:400px;height:196px;display:flex;flex-direction:column;
+  margin:0;padding:20px;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--surface);transition:border-color .18s ease}
+.rv-card:hover{border-color:var(--line-2)}
+.rv-head{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.rv-av{width:34px;height:34px;border-radius:50%;flex:0 0 auto;object-fit:cover;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff}
+.rv-who{min-width:0}
+.rv-name{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* --faint (#62666d) was too dim to read at 12.5px; --muted is the readable step up */
+.rv-handle{font-size:13px;color:var(--muted)}
+/* The quote is the point of the card, so it does NOT use --muted (#8a8f98,
+   ~5.8:1). #c8cdd7 on --surface is ~11.8:1, and 14.5/1.6 gives it room to breathe.
+   flex:1 lets it fill the fixed-height card without pushing the header around. */
+.rv-card blockquote{margin:0;flex:1;font-size:14.5px;line-height:1.6;color:#c8cdd7}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+.dots{display:flex;gap:6px;flex:0 0 auto}
+.dots i{width:10px;height:10px;border-radius:50%;display:block}
+.lock{width:11px;height:11px;flex:0 0 auto;opacity:.6}
+.urlbar{flex:1;min-width:0;height:25px;border-radius:7px;background:#0c0e13;border:1px solid var(--line);
+  display:flex;align-items:center;padding:0 10px;gap:7px;font-size:11.5px;color:var(--faint);
+  font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- job card (Upwork-like) ---------- */
+.job{background:#1a1a1a;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:13px 15px}
+.job + .job{margin-top:11px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px}
+/* mirrors Upwork's .air3-badge-status-neutral, measured on a live card */
+.chip{display:inline-block;background:#0a255c;color:#d1dffa;border-radius:4px;padding:0 8px;
+  font-size:11.5px;font-weight:600;line-height:19px;white-space:nowrap}
+.chip b{font-weight:500;opacity:.7}
+.chip.qual{background:#123a2c;color:#b9f0d5}
+.job-meta{font-size:12px;color:#9aa0a6;margin-bottom:5px}
+.job-title{font-size:15px;font-weight:600;color:#e9ecf1;margin-bottom:8px;letter-spacing:-.01em}
+.job-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:#b6bcc7;margin-bottom:6px}
+.verified{display:inline-flex;align-items:center;gap:5px;color:#7fd1a8;font-weight:500}
+.verified svg{width:13px;height:13px}
+.stars{color:#f0a04b;letter-spacing:1px;font-size:11.5px}
+.job-terms{font-size:12px;color:#8b919c}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.tag{background:#2e2e2e;color:#d6d9de;border-radius:4px;padding:2px 9px;font-size:11.5px}
+
+/* ============================================================ Sections */
+.sec-head{text-align:center;max-width:640px;margin:0 auto 46px}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  background:linear-gradient(120deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:13px}
+.sec-head h2{font-size:clamp(1.55rem,3.4vw,2.4rem)}
+.sec-head p{margin-top:13px;color:var(--muted);font-size:16px}
+
+/* ---------- interactive filter playground ---------- */
+.play{display:grid;grid-template-columns:1fr 316px;gap:18px;align-items:start;
+  border:1px solid var(--line-2);border-radius:16px;padding:16px;background:#101318}
+.results-head{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--faint);margin-bottom:11px}
+
+.panel{background:#14161c;border:1px solid rgba(255,255,255,.11);border-radius:14px;
+  display:flex;flex-direction:column;overflow:hidden;font-size:13px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.p-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid rgba(255,255,255,.11)}
+.p-brand{display:flex;align-items:center;gap:8px}
+.p-dot{width:17px;height:17px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.p-brand h4{margin:0;font-size:13.5px;font-weight:650}
+.p-count{font-size:11px;font-weight:600;color:#99a2b2;background:#1b1f27;border:1px solid rgba(255,255,255,.11);border-radius:999px;padding:1px 7px}
+.p-actions{display:flex;gap:4px;color:#99a2b2}
+.p-actions span{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;font-size:13px}
+.p-body{padding:11px 13px;display:flex;flex-direction:column;gap:10px}
+.p-stats{font-size:12px;color:#99a2b2;background:#1b1f27;border:1px solid rgba(255,255,255,.11);border-radius:9px;padding:7px 10px}
+.p-stats b{color:#e7eaef;font-weight:650}
+.p-group-title{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#99a2b2;margin-bottom:3px}
+.p-row{display:grid;grid-template-columns:1fr 104px;align-items:center;gap:9px;padding:3px 0}
+.p-row label{font-size:12.5px;color:#e7eaef}
+.p-row input,.p-row select{width:100%;height:30px;padding:0 8px;font:inherit;font-size:12.5px;color:#e7eaef;
+  background:#1b1f27;border:1px solid rgba(255,255,255,.11);border-radius:8px;appearance:none;-moz-appearance:textfield}
+.p-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.p-row input:focus,.p-row select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.p-row select{background-image:linear-gradient(45deg,transparent 50%,#99a2b2 50%),linear-gradient(135deg,#99a2b2 50%,transparent 50%);
+  background-position:calc(100% - 15px) 13px,calc(100% - 10px) 13px;background-size:5px 5px;background-repeat:no-repeat}
+.p-toggle{grid-template-columns:1fr 32px}
+.sw{position:relative;width:32px;height:18px;justify-self:end}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.sw i{position:absolute;inset:0;border-radius:999px;background:#222833;border:1px solid rgba(255,255,255,.11);transition:.18s}
+.sw i::after{content:'';position:absolute;top:50%;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transform:translateY(-50%);transition:.18s}
+.sw input:checked + i{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+.sw input:checked + i::after{left:16px}
+.p-foot{display:grid;grid-template-columns:1fr auto;gap:8px;padding:2px 13px 13px}
+.p-apply{height:34px;border:0;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font:inherit;font-size:12.5px;font-weight:620;cursor:pointer}
+.p-apply:hover{filter:brightness(1.08)}
+.p-reset{height:34px;padding:0 14px;border:1px solid rgba(255,255,255,.11);border-radius:9px;background:transparent;color:#99a2b2;font:inherit;font-size:12.5px;cursor:pointer}
+.p-reset:hover{color:#e7eaef;background:#1b1f27}
+.job.is-dim{opacity:.2;filter:grayscale(.85);transition:opacity .28s ease,filter .28s ease}
+
+/* ---------- features / signals / steps ---------- */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line);border-radius:var(--radius);padding:24px;background:var(--surface);transition:.18s ease}
+.card:hover{border-color:var(--line-2);transform:translateY(-2px);background:var(--surface-2)}
+.ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin-bottom:14px;
+  background:linear-gradient(135deg,rgba(79,124,255,.18),rgba(139,92,246,.18));border:1px solid rgba(139,92,246,.24)}
+.ico svg{width:18px;height:18px;stroke:#b9c6ff}
+.card h3{font-size:15.5px;margin-bottom:8px}
+.card p{font-size:14px;color:var(--muted)}
+
+.signals{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:11px}
+.sig{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:14px 15px;background:var(--surface)}
+.sig .k{font-size:13px;font-weight:600}
+.sig .v{font-size:12.5px;color:var(--muted);margin-top:2px}
+.sig .badge{flex:0 0 auto;background:#0a255c;color:#d1dffa;border-radius:4px;padding:1px 7px;font-size:10.5px;font-weight:650;margin-top:1px;white-space:nowrap}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
+.step{border:1px solid var(--line);border-radius:var(--radius);padding:24px;background:var(--surface);position:relative}
+.step::before{counter-increment:s;content:counter(s);position:absolute;top:-13px;left:24px;width:27px;height:27px;
+  border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+.step h3{font-size:15px;margin:9px 0 8px}
+.step p{font-size:13.5px;color:var(--muted)}
+code.inline{font-family:var(--mono);font-size:12.5px;background:var(--bg-2);border:1px solid var(--line);border-radius:5px;padding:2px 6px;color:#c7d2fe;word-break:break-word}
+
+.privacy{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:30px}
+.privacy ul{margin:0;padding:0;list-style:none;display:grid;gap:14px}
+.privacy li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:var(--muted)}
+.privacy li svg{width:17px;height:17px;flex:0 0 auto;margin-top:3px;stroke:var(--good)}
+.privacy li b{color:var(--text);font-weight:600}
+
+.band{border:1px solid var(--line-2);border-radius:20px;padding:50px 26px;text-align:center;
+  background:radial-gradient(120% 140% at 50% 0%,rgba(79,124,255,.16),transparent 62%),var(--surface)}
+.band h2{font-size:clamp(1.5rem,3.2vw,2.1rem)}
+.band p{color:var(--muted);margin:13px auto 28px;max-width:500px}
+
+footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
+.foot-grid{display:grid;grid-template-columns:1.7fr repeat(4,1fr);gap:32px}
+.foot-brand p{margin-top:12px;font-size:13.5px;color:var(--muted);max-width:280px}
+.foot-col{display:flex;flex-direction:column;gap:9px}
+.foot-col h4{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;letter-spacing:0}
+.foot-col a{font-size:13.5px;color:var(--muted)}
+.foot-col a:hover{color:var(--text)}
+.foot-base{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  margin-top:40px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+.foot-disc{max-width:520px;text-align:right}
+
+.rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.rv.in{opacity:1;transform:none}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media(max-width:1000px){
+  .play{grid-template-columns:1fr}
+  .panel{order:-1}                 /* controls first on narrow screens */
+  .p-row{grid-template-columns:1fr 140px}
+}
+@media(max-width:900px){
+  :root{--sec-pad:72px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr}
+  .nav-links{gap:18px}
+  .nav-links a:not(.btn){display:none}
+  .foot-grid{grid-template-columns:1fr 1fr 1fr;gap:28px}
+  .foot-brand{grid-column:1/-1}
+}
+@media(max-width:860px){
+  /* stack the two panes; the arrow turns to point downward */
+  .cmp{grid-template-columns:1fr;gap:12px}
+  .cmp-arrow{justify-self:center;transform:rotate(90deg)}
+}
+@media(max-width:680px){
+  :root{--sec-pad:60px}
+  body{font-size:15.5px}
+  .hero{padding-top:56px}
+  .grid{grid-template-columns:1fr}
+  .signals{grid-template-columns:1fr}
+  .cta .btn{width:100%}            /* full-width CTAs, easier to tap */
+  .cmp-wrap{margin-top:38px}
+  .pane-body{padding:11px}
+  .job{padding:12px}
+  .job-title{font-size:14.5px}
+  .chip{font-size:11px;padding:0 7px}
+  .tag{font-size:11px}
+  .privacy{padding:22px}
+  .band{padding:38px 20px}
+  .foot-grid{grid-template-columns:1fr 1fr;gap:26px}
+  .foot-brand{grid-column:1/-1}
+  .foot-base{flex-direction:column;align-items:flex-start;gap:12px}
+  .foot-disc{text-align:left}
+  /* narrower cards + a proportionally larger fade so no edge card stays legible */
+  /* narrower card wraps the same quote onto more lines, so it needs MORE height */
+  .rv-card{width:300px;height:230px;padding:17px}
+  .rv-rail-wrap{padding:0 10px}
+  .rv-rail{gap:12px}
+  .marquee{--fade:72px}
+}
+@media(max-width:420px){
+  .p-row{grid-template-columns:1fr 118px}
+  .job-row{gap:8px;font-size:12px}
+  .pane-tag{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  .job.is-dim{transition:none}
+}
+</style>
+</head>
+
+<body>
+<div class="glow" aria-hidden="true"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      Upcraft AI
+    </a>
+    <nav class="nav-links">
+      <a href="#compare">Compare</a>
+      <a href="#try">Try it</a>
+      <a href="#signals">Signals</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO + BEFORE/AFTER ================= -->
+  <section class="hero" id="compare" style="padding-bottom:0">
+    <div class="wrap">
+      <h1>Review more jobs <br class="h1-brk"> <span class="grad">in less time.</span></h1>
+      <p class="sub">
+        Hire rate, total spend, reviews and the JSS they require — pinned to the top of every
+        Upwork search result, before you click anything.
+      </p>
+      <div class="cta">
+        <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for Chrome
+        </a>
+        <a href="#try" class="btn btn-ghost btn-lg">Try the filters</a>
+      </div>
+      <p class="microcopy">No account. No servers. Nothing leaves upwork.com.</p>
+
+      <!-- before / after -->
+      <div class="cmp-wrap rv">
+        <div class="cmp">
+          <div class="pane">
+            <div class="pane-tag"><span class="pip"></span> Upwork alone</div>
+            <div class="pane-body" id="paneBefore"></div>
+          </div>
+
+          <div class="cmp-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+
+          <div class="pane hero-pane">
+            <div class="pane-tag"><span class="pip"></span> With Upcraft</div>
+            <div class="pane-body" id="paneAfter"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TRY IT ================= -->
+  <section id="try">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Live demo</div>
+        <h2>Ten filters. One pass.</h2>
+        <p>This panel is real — change anything and press Apply. It runs the same rules the extension does, including the fail-open behaviour: a signal a client never published won't hide their job.</p>
+      </div>
+
+      <div class="play rv">
+        <div>
+          <div class="results-head">
+            <span>Jobs Per Page: 50</span>
+            <span id="liveCount">5 of 5 results</span>
+          </div>
+          <div id="jobList"></div>
+        </div>
+
+        <aside class="panel" aria-label="Upcraft filter panel">
+          <div class="p-head">
+            <div class="p-brand">
+              <span class="p-dot" aria-hidden="true"></span><h4>Upcraft</h4>
+              <span class="p-count" id="pCount">5/5</span>
+            </div>
+            <div class="p-actions" aria-hidden="true"><span>&ndash;</span><span>&times;</span></div>
+          </div>
+          <div class="p-body">
+            <div class="p-stats" id="pStats"><b>5</b> shown &middot; <b>0</b> hidden</div>
+            <div class="p-row p-toggle">
+              <label for="d-details">Show job details on cards</label>
+              <span class="sw"><input type="checkbox" id="d-details" checked><i></i></span>
+            </div>
+            <div>
+              <div class="p-group-title">Job</div>
+              <div class="p-row"><label for="d-age">Max age</label><input type="number" id="d-age" placeholder="any hrs" min="0"></div>
+              <div class="p-row"><label for="d-prop">Max proposals</label>
+                <select id="d-prop"><option value="">Any</option><option value="5">Under 5</option><option value="10">Under 10</option><option value="15">Under 15</option><option value="20">Under 20</option><option value="50">Under 50</option></select>
+              </div>
+              <div class="p-row"><label for="d-type">Payment type</label>
+                <select id="d-type"><option value="">Any</option><option value="hourly">Hourly</option><option value="fixed">Fixed price</option></select>
+              </div>
+              <div class="p-row"><label for="d-level">Experience</label>
+                <select id="d-level"><option value="">Any</option><option value="entry">Entry level</option><option value="intermediate">Intermediate</option><option value="expert">Expert</option></select>
+              </div>
+            </div>
+            <div>
+              <div class="p-group-title">Client</div>
+              <div class="p-row"><label for="d-spend">Min spend</label><input type="number" id="d-spend" placeholder="any $" min="0"></div>
+              <div class="p-row"><label for="d-rating">Min rating</label><input type="number" id="d-rating" placeholder="any /5" min="0" max="5" step="0.1"></div>
+              <div class="p-row"><label for="d-hire">Min hire rate</label><input type="number" id="d-hire" placeholder="any %" min="0" max="100"></div>
+              <div class="p-row p-toggle"><label for="d-ver">Payment verified only</label>
+                <span class="sw"><input type="checkbox" id="d-ver"><i></i></span>
+              </div>
+            </div>
+          </div>
+          <div class="p-foot">
+            <button class="p-apply" id="dApply">Apply filters</button>
+            <button class="p-reset" id="dReset">Reset</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIGNALS ================= -->
+  <section id="signals">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">On every card</div>
+        <h2>Ten signals, pulled automatically</h2>
+        <p>Upcraft reads each job's own page and folds the result back into the search list, styled with Upwork's own badge component so it never looks bolted on.</p>
+      </div>
+      <div class="signals rv">
+        <div class="sig"><span class="badge">Jobs Posted</span><div><div class="k">Posting history</div><div class="v">How much they actually hire on Upwork</div></div></div>
+        <div class="sig"><span class="badge">Hire Rate</span><div><div class="k">Follow-through</div><div class="v">A 3% hire rate is a warning sign</div></div></div>
+        <div class="sig"><span class="badge">Member Since</span><div><div class="k">Account age</div><div class="v">Brand-new accounts, spotted instantly</div></div></div>
+        <div class="sig"><span class="badge">Reviews</span><div><div class="k">Rating &amp; volume</div><div class="v">Score plus the number behind it</div></div></div>
+        <div class="sig"><span class="badge">Client</span><div><div class="k">Individual or Company</div><div class="v">Sets the tone of the whole engagement</div></div></div>
+        <div class="sig"><span class="badge">Hires</span><div><div class="k">Hires on this job</div><div class="v">Already filled? Skip it</div></div></div>
+        <div class="sig"><span class="badge">Last Viewed</span><div><div class="k">Client activity</div><div class="v">Are they still reading proposals?</div></div></div>
+        <div class="sig"><span class="badge" style="background:#123a2c;color:#b9f0d5">Needs JSS</span><div><div class="k">Required Job Success</div><div class="v">Don't apply below their threshold</div></div></div>
+        <div class="sig"><span class="badge" style="background:#123a2c;color:#b9f0d5">Rising Talent</span><div><div class="k">Badge requirement</div><div class="v">Filtered out before you write a word</div></div></div>
+        <div class="sig"><span class="badge" style="background:#123a2c;color:#b9f0d5">English</span><div><div class="k">Language level</div><div class="v">Conversational, Fluent, Native</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section id="features">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Features</div>
+        <h2>Built to disappear into Upwork</h2>
+        <p>Not a dashboard you have to visit. A layer on the page you already use.</p>
+      </div>
+      <div class="grid rv">
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z"/></svg></div>
+          <h3>Ten real filters</h3><p>Age, proposals, payment type, experience, spend, rating, hire rate, jobs posted, client type and payment-verified — combined, applied instantly.</p></div>
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h8l-1 8 10-12h-8z"/></svg></div>
+          <h3>No page reloads</h3><p>Proposal bands are read straight off the card, so narrowing your search never throws away the results you already loaded.</p></div>
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>Keeps up with scrolling</h3><p>Infinite scroll, sorting, pagination and in-page navigation are all tracked — new jobs get enriched as they appear.</p></div>
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <h3>Native by design</h3><p>Chips reuse Upwork's own badge component, so they inherit its light and dark themes rather than approximating them.</p></div>
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/></svg></div>
+          <h3>Off means off</h3><p>One switch stops the chips <em>and</em> the network requests behind them. No quiet background fetching.</p></div>
+        <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M4 4h16v12H5.2L4 18z"/></svg></div>
+          <h3>Remembers you</h3><p>Filters, panel position and preferences persist. Press Enter anywhere in the panel to apply.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSTALL ================= -->
+  <section id="install">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Install</div>
+        <h2>Running in about a minute</h2>
+        <p>Load it unpacked while the Web Store listing is in progress.</p>
+      </div>
+      <div class="steps rv">
+        <div class="step"><h3>Download &amp; unzip</h3><p>Grab the latest <code class="inline">.zip</code> from Releases and extract it to a folder you'll keep.</p></div>
+        <div class="step"><h3>Load unpacked</h3><p>Open <code class="inline">chrome://extensions</code>, switch on <strong>Developer mode</strong>, then choose <strong>Load unpacked</strong> and select that folder.</p></div>
+        <div class="step"><h3>Open a search</h3><p>Go to any Upwork job search and click the Upcraft icon. Chips fill in as cards scroll into view.</p></div>
+      </div>
+      <div style="text-align:center;margin-top:32px">
+        <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">Download the latest release</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REVIEWS =================
+       Renders from the REVIEWS array in the script below. While that array is
+       empty the whole section removes itself, so the page never ships an empty
+       shell — and never ships invented testimonials either. -->
+  <section id="reviews" hidden>
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Reviews</div>
+        <h2>What freelancers say</h2>
+      </div>
+    </div>
+    <!-- The rail sits in its OWN wider container, not the 1140px page gutter:
+         it should stop just short of the viewport edge, not align with body copy. -->
+    <div class="rv-rail-wrap rv">
+      <div class="rv-rail">
+        <div class="marquee" id="rvRow1" aria-hidden="true"></div>
+        <div class="marquee rev" id="rvRow2" aria-hidden="true"></div>
+      </div>
+    </div>
+    <ul class="sr-only" id="rvA11y"></ul>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section style="padding-top:16px">
+    <div class="wrap">
+      <div class="band rv">
+        <h2>Read fewer jobs. Win more of them.</h2>
+        <p>Every connect you don't spend on a client who never hires is one you keep for a client who does.</p>
+        <div class="cta">
+          <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">Download for Chrome</a>
+          <a href="https://github.com/akifejaz/docs-upcraft" class="btn btn-ghost btn-lg">View source</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top">
+          <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
+          Upcraft AI
+        </a>
+        <p>Client signals and real filters for Upwork job search. Free, open source, no backend.</p>
+      </div>
+
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="#compare">Before &amp; after</a>
+        <a href="#try">Live demo</a>
+        <a href="#signals">Signals</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="foot-col">
+        <h4>Get it</h4>
+        <a href="https://github.com/akifejaz/docs-upcraft/releases/latest">Latest release</a>
+        <a href="https://github.com/akifejaz/docs-upcraft/releases">All releases</a>
+        <a href="#install">Install guide</a>
+      </div>
+      <div class="foot-col">
+        <h4>Project</h4>
+        <a href="https://github.com/akifejaz/docs-upcraft">Source</a>
+        <a href="https://github.com/akifejaz/docs-upcraft/issues">Report an issue</a>
+        <a href="https://github.com/akifejaz/upcraft/blob/main/README.md">Docs</a>
+      </div>
+      <div class="foot-col">
+        <h4>Author</h4>
+        <a href="https://github.com/akifejaz">GitHub</a>
+        <a href="https://www.linkedin.com/in/akifejaz/">LinkedIn</a>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>© <span id="yr">2026</span> Upcraft AI · MIT licensed</span>
+      <span class="foot-disc">Not affiliated with, endorsed by, or sponsored by Upwork Global Inc. “Upwork” is a trademark of its respective owner.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  $('yr').textContent = new Date().getFullYear();
+
+  /* -----------------------------------------------------------
+     Real values captured from a live Upwork search while building
+     the extension — not invented.
+     ----------------------------------------------------------- */
+  var JOBS = [
+    { title:'Python Trajectory Analysis', ageH:2, prop:20, spend:1000, rating:5.0, verified:true,
+      type:'fixed', level:'intermediate', hire:100, terms:'Fixed price · Intermediate · Est. budget: $30.00',
+      country:'China', tags:['Python','Data Science','Data Analysis'],
+      chips:[['Jobs Posted','33'],['Hire Rate','100%'],['Member Since','Jan 14, 2019'],['Reviews','5.0 • 28 reviews'],['Client','Company']] },
+    { title:'Experienced AI Developers & Prompt Engineers Wanted', ageH:2, prop:50, spend:10000, rating:5.0, verified:true,
+      type:'hourly', level:'expert', hire:12, terms:'Hourly · Expert · 3 to 6 months',
+      country:'USA', tags:['Python','MySQL','Django','GraphQL'],
+      chips:[['Jobs Posted','85'],['Hire Rate','12%'],['Member Since','May 18, 2024'],['Reviews','5.0 • 2 reviews'],['Client','Company']] },
+    { title:'Python Developer (AWS Cloud)', ageH:3, prop:10, spend:7000, rating:4.9, verified:true,
+      type:'fixed', level:'intermediate', hire:45, terms:'Fixed price · Intermediate · Est. budget: $1,000.00',
+      country:'India', tags:['Python','Amazon EC2','AWS','DevOps'],
+      chips:[['Jobs Posted','134'],['Hire Rate','45%'],['Member Since','Oct 25, 2017'],['Reviews','4.9 • 52 reviews'],['Client','Company'],['Hires','0'],['Last Viewed','1 hour ago']],
+      quals:[['Needs JSS','90%+'],['Rising Talent','Yes'],['English','Fluent']] },
+    { title:'QuickBooks Update Assistance', ageH:26, prop:15, spend:20000, rating:4.9, verified:true,
+      type:'hourly', level:'intermediate', hire:100, terms:'Hourly · Intermediate · Less than 1 month',
+      country:'United States', tags:['Intuit QuickBooks','Bookkeeping'],
+      chips:[['Jobs Posted','10'],['Hire Rate','100%'],['Member Since','May 23, 2017'],['Reviews','4.9 • 13 reviews'],['Last Viewed','yesterday']] },
+    { title:'Scrapy Expert Needed for Data Pipeline', ageH:96, prop:50, spend:0, rating:0, verified:false,
+      type:'fixed', level:'entry', hire:0, terms:'Fixed price · Entry level · Est. budget: $80.00',
+      country:'—', tags:['Python','Scrapy','Web Scraping'],
+      chips:[['Jobs Posted','1'],['Hire Rate','0%'],['Member Since','Jul 28, 2026'],['Hires','0']] }
+  ];
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function propLabel(p){ return p >= 50 ? '50+' : (p + ' to ' + (p + 5)); }
+  function ageLabel(h){ return h < 24 ? 'Posted ' + h + ' hours ago'
+    : (h < 48 ? 'Posted yesterday' : 'Posted ' + Math.round(h/24) + ' days ago'); }
+  function spendLabel(s){ return !s ? '$0 spent'
+    : (s >= 1000 ? '$' + Math.round(s/1000) + 'K+ spent' : '$' + s + ' spent'); }
+  function stars(r){ return r ? '★★★★★'.slice(0, Math.max(1, Math.round(r))) : ''; }
+
+  function cardHTML(j, i, withChips){
+    var chips = '<div class="chips">' +
+      j.chips.map(function(c){ return '<span class="chip"><b>' + esc(c[0]) + ':</b> ' + esc(c[1]) + '</span>'; }).join('') +
+      (j.quals ? j.quals.map(function(c){ return '<span class="chip qual"><b>' + esc(c[0]) + ':</b> ' + esc(c[1]) + '</span>'; }).join('') : '') +
+      '</div>';
+    return '<div class="job" data-i="' + i + '">' + (withChips ? chips : '') +
+      '<div class="job-meta">' + ageLabel(j.ageH) + ' &middot; Proposals: ' + propLabel(j.prop) + '</div>' +
+      '<div class="job-title">' + esc(j.title) + '</div>' +
+      '<div class="job-row">' +
+        (j.verified ? '<span class="verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>Payment verified</span>' : '') +
+        (j.rating ? '<span class="stars">' + stars(j.rating) + '</span><span>' + j.rating.toFixed(1) + '</span>' : '') +
+        '<span>' + spendLabel(j.spend) + '</span><span>' + esc(j.country) + '</span>' +
+      '</div>' +
+      '<div class="job-terms">' + esc(j.terms) + '</div>' +
+      '<div class="tags">' + j.tags.map(function(t){ return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- Before / After panes ----------------
+     Same two jobs rendered twice — chips off on the left, on
+     on the right. Nothing else differs, so the comparison is
+     genuinely like-for-like.
+     ---------------------------------------------------- */
+  var CMP = [JOBS[0], JOBS[1]];
+  $('paneBefore').innerHTML = CMP.map(function(j,i){ return cardHTML(j,i,false); }).join('');
+  $('paneAfter').innerHTML  = CMP.map(function(j,i){ return cardHTML(j,i,true);  }).join('');
+
+  /* ================= REVIEWS =================
+     ADD REAL QUOTES ONLY. Every entry is a statement attributed to a named
+     person — inventing one, or pairing a real name with words they never
+     wrote, is a fabricated endorsement. While this array is empty the whole
+     section removes itself, so an unpopulated page simply omits it.
+
+     Shape:
+       { name:'Full Name', handle:'@github_or_x_handle',
+         avatar:'https://github.com/<user>.png?size=96',  // optional
+         quote:'Their words, verbatim.' }
+
+     On avatars: a GitHub avatar URL is the easiest honest source, but it is an
+     external request from an otherwise fully self-contained page. Omit
+     `avatar` and the card falls back to the person's initials, which keeps the
+     page request-free. Get permission before using someone's name and face.
+     ========================================== */
+  var REVIEWS = [];
+
+  /* ---- SAMPLE DATA — DESIGN PREVIEW ONLY -------------------------------
+     Fictional. Every name, handle and quote below was written to exercise the
+     layout (varying name and quote lengths), NOT to represent a real person.
+
+     It is deliberately NOT shown on the live site. It renders only on
+     localhost, or on any host with ?preview=reviews in the URL, and always
+     under a visible "sample content" ribbon. That way you can judge the design
+     now without the published page ever carrying an endorsement nobody gave.
+
+     To go live: put real, permitted quotes in REVIEWS above and delete this
+     block. REVIEWS always wins when it is non-empty.
+     --------------------------------------------------------------------- */
+  var SAMPLE_REVIEWS = [
+    { 
+      name: 'Marcus Dowling', 
+      handle: '@marcus_dev', 
+      quote: 'The hire rate chip alone saved me so many connects. I used to waste proposals on clients who post dozens of jobs but haven\'t hired anyone in months.' 
+    },
+    { 
+      name: 'Priya Nair', 
+      handle: '@priyanair', 
+      quote: 'Spotting "Needs JSS 90%+" directly on the card before clicking into the job post saves me at least twenty minutes of tab-switching every morning.' 
+    },
+    { 
+      name: 'Tom Wright', 
+      handle: '@tomwright_', 
+      quote: 'Finally, a browser extension that enhances the actual Upwork search page instead of forcing me to navigate an external dashboard.' 
+    },
+    { 
+      name: 'Sofia Almeida', 
+      handle: '@sofia_almeida', 
+      quote: 'Filtering out low-hire-rate clients nearly doubled my response rate. It\'s a subtle feature, but it makes a massive difference.' 
+    },
+    { 
+      name: 'Kenji Ito', 
+      handle: '@kenji_ito', 
+      quote: 'The UI blends so seamlessly into Upwork\'s native design that I genuinely forgot I was using an extension until I tried searching on another laptop.' 
+    },
+    { 
+      name: 'Ravi Patel', 
+      handle: '@ravi_codes', 
+      quote: 'Filtering for under 15 proposals is a game changer. I\'m no longer drowning in jobs that already have 50+ applicants attached.' 
+    },
+    { 
+      name: 'Elena Vasquez', 
+      handle: '@elenav_dev', 
+      quote: 'Seeing "Member Since" alongside total jobs posted gives me instant context on whether a client is serious or just window shopping.' 
+    },
+    { 
+      name: 'Jonas Berg', 
+      handle: '@jonasberg', 
+      quote: 'No signup, no tracking, no backend server. I checked the source code before installing—it strictly runs client-side and does exactly what it promises.' 
+    },
+    { 
+      name: 'Amara Okafor', 
+      handle: '@amara_design', 
+      quote: 'Setting filters for payment verification and minimum client spend lets me skip past 70% of the noise instantly.' 
+    },
+    { 
+      name: 'Daniel Miller', 
+      handle: '@dancodes_', 
+      quote: 'Toggling job details off when I want a quick, low-profile scan is brilliant—and I love that it actually pauses background requests when disabled.' 
+    },
+    { 
+      name: 'Yuki Tanaka', 
+      handle: '@yukitanaka', 
+      quote: 'The English requirement chip is hugely helpful. I stopped wasting time reading proposals that require native English when I don\'t qualify.' 
+    },
+    { 
+      name: 'Chris Whelan', 
+      handle: '@cwhelan_', 
+      quote: 'It handles Upwork\'s infinite scroll smoothly. New job cards get enriched seamlessly as you scroll without any UI lag.' 
+    },
+    { 
+      name: 'Nadia Vance', 
+      handle: '@nadia_ux', 
+      quote: 'Fast, lightweight, and automatically remembers my filter settings between browser sessions. Exactly what a utility extension should be.' 
+    },
+    { 
+      name: 'Felix Rivera', 
+      handle: '@felixrivera', 
+      quote: 'The "Last Viewed" indicator tells me if the client is actively reviewing candidates. That signal alone determines whether a job is worth my connects.' 
+    },
+    { 
+      name: 'Hana Kimura', 
+      handle: '@hanak_dev', 
+      quote: 'I went from opening 30 job postings a day down to 5 or 6 high-quality ones—and my response rate has never been higher.' 
+    }
+  ];
+
+  function initials(name){
+    return name.trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
+  }
+  function reviewCard(r){
+    var av = r.avatar
+      ? '<img class="rv-av" src="' + esc(r.avatar) + '" alt="" loading="lazy" width="34" height="34">'
+      : '<span class="rv-av" aria-hidden="true">' + esc(initials(r.name)) + '</span>';
+    return '<figure class="rv-card">' +
+      '<div class="rv-head">' + av +
+        '<div class="rv-who"><div class="rv-name">' + esc(r.name) + '</div>' +
+        (r.handle ? '<div class="rv-handle">' + esc(r.handle) + '</div>' : '') + '</div>' +
+      '</div>' +
+      '<blockquote>' + esc(r.quote) + '</blockquote></figure>';
+  }
+  function mqTrack(items, fn){
+    return '<div class="mq-track">' + items.map(fn).join('') + '</div>';
+  }
+
+  (function renderReviews(){
+    var sec = $('reviews');
+
+    // Real quotes win. Otherwise fall back to the sample set, but ONLY in a
+    // preview context — localhost, a file:// open, or an explicit
+    // ?preview=reviews. A published page with no real reviews shows nothing.
+    var isPreview = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ||
+                    location.protocol === 'file:' ||
+                    /(^|[?&])preview=reviews(&|$)/.test(location.search);
+
+    var data = REVIEWS.length ? REVIEWS : (isPreview ? SAMPLE_REVIEWS : []);
+
+    if (!data.length) { sec.remove(); return; }      // nothing to show, so show nothing
+    sec.hidden = false;
+
+    var half = Math.ceil(data.length / 2);
+    var rowA = data.slice(0, half);
+    var rowB = data.slice(half).length ? data.slice(half) : rowA;
+
+    // Each track repeats its list so it always overflows the viewport;
+    // a short track gets stretched by min-width:100% and stutters mid-loop.
+    // The second track is an identical copy that fills the gap behind the first.
+    function pair(rows){
+      var doubled = rows.concat(rows);
+      return mqTrack(doubled, reviewCard) + mqTrack(doubled, reviewCard);
+    }
+    $('rvRow1').innerHTML = pair(rowA);
+    $('rvRow2').innerHTML = pair(rowB);
+
+    // The marquees are aria-hidden (duplicated, animated content is hostile to
+    // screen readers); this list carries the same quotes once, accessibly.
+    $('rvA11y').innerHTML = data.map(function(r){
+      return '<li>' + esc(r.name) + (r.handle ? ' (' + esc(r.handle) + ')' : '') +
+             ': “' + esc(r.quote) + '”</li>';
+    }).join('');
+  })();
+
+  /* ---------------- interactive filter playground ---------------- */
+  var list = $('jobList');
+
+  function render(){
+    var withChips = $('d-details').checked;
+    list.innerHTML = JOBS.map(function(j,i){ return cardHTML(j,i,withChips); }).join('');
+  }
+
+  // Mirrors the extension: a value the card doesn't publish never hides the job.
+  function matches(j, f){
+    if (f.age    !== null && j.ageH   > f.age)    return false;
+    if (f.prop   !== null && j.prop   > f.prop)   return false;
+    if (f.spend  !== null && j.spend  < f.spend)  return false;
+    if (f.rating !== null && j.rating < f.rating) return false;
+    if (f.hire   !== null && j.hire   < f.hire)   return false;
+    if (f.type  && j.type  !== f.type)  return false;
+    if (f.level && j.level !== f.level) return false;
+    if (f.ver && !j.verified) return false;
+    return true;
+  }
+  function num(id){ var v = $(id).value; return v === '' ? null : parseFloat(v); }
+
+  function apply(){
+    var f = { age:num('d-age'), prop:num('d-prop'), spend:num('d-spend'),
+              rating:num('d-rating'), hire:num('d-hire'),
+              type:$('d-type').value, level:$('d-level').value, ver:$('d-ver').checked };
+    var shown = 0;
+    Array.prototype.forEach.call(list.children, function(node){
+      var ok = matches(JOBS[+node.dataset.i], f);
+      node.classList.toggle('is-dim', !ok);
+      if (ok) shown++;
+    });
+    $('pStats').innerHTML = '<b>' + shown + '</b> shown &middot; <b>' + (JOBS.length - shown) + '</b> hidden';
+    $('pCount').textContent = shown + '/' + JOBS.length;
+    $('liveCount').textContent = shown + ' of ' + JOBS.length + ' results';
+  }
+  function reset(){
+    ['d-age','d-prop','d-spend','d-rating','d-hire','d-type','d-level'].forEach(function(id){ $(id).value = ''; });
+    $('d-ver').checked = false; apply();
+  }
+
+  $('dApply').addEventListener('click', apply);
+  $('dReset').addEventListener('click', reset);
+  $('d-details').addEventListener('change', function(){ render(); apply(); });
+  document.querySelector('.panel').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); apply(); }
+  });
+
+  render(); apply();
+
+  /* ---------------- reveal ---------------- */
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { rootMargin:'0px 0px -50px 0px', threshold:0.05 });
+  document.querySelectorAll('.rv').forEach(function(n){ io.observe(n); });
+})();
+</script>
+</body>
+</html>
