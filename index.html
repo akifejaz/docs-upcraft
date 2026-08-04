@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Upcraft AI — See the client before you spend a connect</title>
-<meta name="description" content="A Chrome extension that pulls every client signal onto the Upwork search page — hire rate, spend, reviews, required JSS — and filters 50 jobs down to the ones worth reading.">
-<meta property="og:title" content="Upcraft AI — See the client before you spend a connect">
-<meta property="og:description" content="Client hire rate, spend, reviews and required qualifications, right on the Upwork search page. Plus 10 filters that cut 50 results to the handful worth reading.">
+<title>Uplit - An Upwork Chrome Extension</title>
+<meta name="description" content="Every client detail — hire rate, spend, reviews and required qualifications — on the Upwork search page, without opening the job.">
+<meta property="og:title" content="Uplit - An Upwork Chrome Extension">
+<meta property="og:description" content="Every client detail — hire rate, spend, reviews and required qualifications — on the Upwork search page, without opening the job.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0a0c11">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%234f7cff'/><stop offset='1' stop-color='%238b5cf6'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><path d='M8 11h16l-6 7v6l-4-2v-4z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%235E6AD2'/%3E%3Cstop%20offset='1'%20stop-color='%238B5CF6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='512'%20height='512'%20rx='116'%20fill='url%28%23g%29'/%3E%3Cpath%20d='M168%20170%20V300%20A88%2088%200%200%200%20344%20300%20V124'%20fill='none'%20stroke='white'%20stroke-width='46'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 
 <style>
 /* ============================================================
@@ -58,7 +58,7 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);
 .brand{display:flex;align-items:center;gap:10px;font-weight:650;flex:0 0 auto}
 .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
   display:grid;place-items:center;flex:0 0 auto}
-.mark svg{width:15px;height:15px}
+.mark svg{width:13px;height:17px;display:block}
 .nav-links{display:flex;align-items:center;gap:26px;font-size:14px;color:var(--muted)}
 .nav-links a:hover{color:var(--text)}
 
@@ -353,8 +353,8 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
 <header>
   <div class="wrap nav">
     <a class="brand" href="#top">
-      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
-      Upcraft AI
+      <span class="mark" aria-hidden="true"><svg viewBox="137 93 238 326" fill="none"><path d="M168 170 V300 A88 88 0 0 0 344 300 V124" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Uplit - An Upwork chrome extension
     </a>
     <nav class="nav-links">
       <a href="#compare">Compare</a>
@@ -398,7 +398,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
           </div>
 
           <div class="pane hero-pane">
-            <div class="pane-tag"><span class="pip"></span> With Upcraft</div>
+            <div class="pane-tag"><span class="pip"></span> With Uplit</div>
             <div class="pane-body" id="paneAfter"></div>
           </div>
         </div>
@@ -424,10 +424,10 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
           <div id="jobList"></div>
         </div>
 
-        <aside class="panel" aria-label="Upcraft filter panel">
+        <aside class="panel" aria-label="Uplit filter panel">
           <div class="p-head">
             <div class="p-brand">
-              <span class="p-dot" aria-hidden="true"></span><h4>Upcraft</h4>
+              <span class="p-dot" aria-hidden="true"></span><h4>Uplit</h4>
               <span class="p-count" id="pCount">5/5</span>
             </div>
             <div class="p-actions" aria-hidden="true"><span>&ndash;</span><span>&times;</span></div>
@@ -476,7 +476,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
       <div class="sec-head rv">
         <div class="kicker">On every card</div>
         <h2>Ten signals, pulled automatically</h2>
-        <p>Upcraft reads each job's own page and folds the result back into the search list, styled with Upwork's own badge component so it never looks bolted on.</p>
+        <p>Uplit reads each job's own page and folds the result back into the search list, styled with Upwork's own badge component so it never looks bolted on.</p>
       </div>
       <div class="signals rv">
         <div class="sig"><span class="badge">Jobs Posted</span><div><div class="k">Posting history</div><div class="v">How much they actually hire on Upwork</div></div></div>
@@ -529,7 +529,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
       <div class="steps rv">
         <div class="step"><h3>Download &amp; unzip</h3><p>Grab the latest <code class="inline">.zip</code> from Releases and extract it to a folder you'll keep.</p></div>
         <div class="step"><h3>Load unpacked</h3><p>Open <code class="inline">chrome://extensions</code>, switch on <strong>Developer mode</strong>, then choose <strong>Load unpacked</strong> and select that folder.</p></div>
-        <div class="step"><h3>Open a search</h3><p>Go to any Upwork job search and click the Upcraft icon. Chips fill in as cards scroll into view.</p></div>
+        <div class="step"><h3>Open a search</h3><p>Go to any Upwork job search and click the Uplit icon. Chips fill in as cards scroll into view.</p></div>
       </div>
       <div style="text-align:center;margin-top:32px">
         <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">Download the latest release</a>
@@ -579,8 +579,8 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
     <div class="foot-grid">
       <div class="foot-brand">
         <a class="brand" href="#top">
-          <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
-          Upcraft AI
+          <span class="mark" aria-hidden="true"><svg viewBox="137 93 238 326" fill="none"><path d="M168 170 V300 A88 88 0 0 0 344 300 V124" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          Uplit
         </a>
         <p>Client signals and real filters for Upwork job search. Free, open source, no backend.</p>
       </div>
@@ -612,7 +612,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
     </div>
 
     <div class="foot-base">
-      <span>© <span id="yr">2026</span> Upcraft AI · MIT licensed</span>
+      <span>© <span id="yr">2026</span> Uplit · MIT licensed</span>
       <span class="foot-disc">Not affiliated with, endorsed by, or sponsored by Upwork Global Inc. “Upwork” is a trademark of its respective owner.</span>
     </div>
   </div>
