@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Uplit - An Upwork Chrome Extension</title>
-<meta name="description" content="Every client detail — hire rate, spend, reviews and required qualifications — on the Upwork search page, without opening the job.">
-<meta property="og:title" content="Uplit - An Upwork Chrome Extension">
-<meta property="og:description" content="Every client detail — hire rate, spend, reviews and required qualifications — on the Upwork search page, without opening the job.">
+<title>Uplit - An Upwork Extension</title>
+<meta name="description" content="Every client detail on the Upwork search page: hire rate, spend, reviews and the qualifications they require, without opening the job.">
+<meta property="og:title" content="Uplit - An Upwork Extension">
+<meta property="og:description" content="Every client detail on the Upwork search page: hire rate, spend, reviews and the qualifications they require, without opening the job.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%235E6AD2'/%3E%3Cstop%20offset='1'%20stop-color='%238B5CF6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='512'%20height='512'%20rx='116'%20fill='url%28%23g%29'/%3E%3Cpath%20d='M168%20170%20V300%20A88%2088%200%200%200%20344%20300%20V124'%20fill='none'%20stroke='white'%20stroke-width='46'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -73,6 +73,30 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);
 .btn-ghost{border-color:var(--line-2);color:var(--text);background:transparent}
 .btn-ghost:hover{background:var(--surface-2);border-color:rgba(255,255,255,.2)}
 .btn-lg{height:44px;padding:0 22px;font-size:14.5px}
+/* Edge's own blue-to-teal ramp, so the store button reads as the store's and
+   not as a second copy of the brand gradient sitting beside it. */
+.btn-edge{background:linear-gradient(135deg,#0f6cbd,#2bc4b4);color:#fff;box-shadow:0 4px 18px rgba(15,108,189,.32)}
+.btn-edge:hover{filter:brightness(1.09)}
+.btn svg{flex:0 0 auto}
+
+/* ---------- install paths ---------- */
+/* Two routes, not one list: Edge installs in a click, Chrome does not. Showing
+   them as equal numbered steps implied a single procedure and buried the fact
+   that Edge users can skip all of it. */
+/* stretch, not start: the Chrome route has one step more than the Edge route,
+   so sizing each card to its own content left them visibly mismatched. Equal
+   height plus margin-top:auto on the button lines both buttons up as well. */
+.paths{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+.path{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:26px;display:flex;flex-direction:column}
+.path.primary{border-color:rgba(43,196,180,.32);background:linear-gradient(180deg,rgba(15,108,189,.09),transparent 60%),var(--surface)}
+.path-head{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+.path-head svg{width:26px;height:26px}
+.path-head h3{font-size:16.5px}
+.path .lede{font-size:13.5px;color:var(--muted);margin-bottom:16px}
+.path ol{margin:0 0 18px;padding-left:19px;display:grid;gap:9px;font-size:13.5px;color:var(--muted)}
+.path ol li{padding-left:2px}
+.path .btn{margin-top:auto;align-self:flex-start}
+@media(max-width:860px){ .paths{grid-template-columns:1fr} }
 
 /* ============================================================ Hero */
 .hero{padding:78px 0 0;text-align:center}
@@ -224,6 +248,36 @@ h1 .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));
 .p-row select{background-image:linear-gradient(45deg,transparent 50%,#99a2b2 50%),linear-gradient(135deg,#99a2b2 50%,transparent 50%);
   background-position:calc(100% - 15px) 13px,calc(100% - 10px) 13px;background-size:5px 5px;background-repeat:no-repeat}
 .p-toggle{grid-template-columns:1fr 32px}
+/* Two inputs sharing the control column: max age + unit, and the spend band.
+   Client spend is a BAND in the extension, not a minimum, because reply rate
+   falls as spend rises. A single "Min spend" box misrepresented the feature. */
+.p-pair{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.p-pair select{padding-right:20px;background-position:calc(100% - 11px) 13px,calc(100% - 7px) 13px}
+.p-preset{margin:-3px 0 1px;text-align:right}
+.p-preset button{font:inherit;font-size:11px;font-weight:600;color:#bcc6ff;cursor:pointer;
+  background:rgba(94,106,210,.16);border:1px solid rgba(139,92,246,.32);border-radius:6px;padding:2px 8px}
+.p-preset button:hover{background:rgba(94,106,210,.28);color:#fff}
+/* Mirrors .uc-tag-x in the extension: the hire-rate threshold has no measured
+   basis, and the panel says so rather than removing the filter. */
+.p-tag{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:#e0a34a;border:1px solid rgba(224,163,74,.42);border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.job.is-hidden{display:none}
+
+/* ---------- verdict row ---------- */
+/* Rendered by research.js, the extension's own scorer. Tones mirror the four
+   bands it returns; there is no fifth state to style. */
+.vd{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:8px}
+.vd-band{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  border-radius:4px;padding:1px 6px;line-height:16px}
+.vd-strong{background:#123a2c;color:#8ce6bb}
+.vd-fair{background:#1d3357;color:#a9c6f5}
+.vd-weak{background:#3d3418;color:#e8ce8a}
+.vd-avoid{background:#4a1d1f;color:#f3a9ac}
+.vd-chip{font-size:10.5px;font-weight:600;border-radius:4px;padding:1px 6px;line-height:16px;white-space:nowrap}
+.vd-tone-good{background:#123a2c;color:#b9f0d5}
+.vd-tone-neutral{background:#1b1f27;color:#b6bcc7}
+.vd-tone-bad{background:#4a1d1f;color:#f3a9ac}
+.vd-unknown{background:transparent;border:1px dashed rgba(255,255,255,.16);color:#7d838d}
 .sw{position:relative;width:32px;height:18px;justify-self:end}
 .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
 .sw i{position:absolute;inset:0;border-radius:999px;background:#222833;border:1px solid rgba(255,255,255,.11);transition:.18s}
@@ -350,18 +404,53 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
 <body>
 <div class="glow" aria-hidden="true"></div>
 
+<!-- Edge mark, defined once and referenced with <use>. A simplified rendition of
+     the Microsoft Edge wave in Edge's own colours, drawn here because this page
+     makes no external requests and cannot pull Microsoft's badge asset. It is
+     NOT the official Microsoft brand file. If you need brand compliance, take
+     the badge from Microsoft's brand guidance and swap it in. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="edgeA" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0f5fcb"/><stop offset="1" stop-color="#2bc4b4"/>
+    </linearGradient>
+    <linearGradient id="edgeB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#35c1f1"/><stop offset="1" stop-color="#0f6cbd"/>
+    </linearGradient>
+    <symbol id="edgeMark" viewBox="0 0 32 32">
+      <path fill="url(#edgeB)" d="M16 3c7 0 12 4.4 12.6 10.4.1 1.4-.8 2.3-2.1 2.3H13.9c-3.5 0-6.2 2-6.2 5 0 1 .3 2 .8 2.8C5.4 21.3 3.6 18 3.6 14.6 3.6 8 9 3 16 3z"/>
+      <path fill="url(#edgeA)" d="M28.6 21.6c.6-.3 1.2.3 1 1C28 27.5 22.9 31 16.8 31c-4 0-7.6-1.5-10-4-1.3-1.4-1.9-3-1.9-4.4 0-2.9 2.4-5.1 6-5.1h11.6c-.3 2.2.6 4.2 2.4 4.2.8 0 1.6-.2 3.7-.1z"/>
+    </symbol>
+    <!-- Chrome mark: three 120-degree sectors in Google's four brand colours.
+         Same caveat as the Edge mark above. This is a simplified rendition drawn
+         inline because the page pulls no external assets, not Google's official
+         brand file. -->
+    <symbol id="chromeMark" viewBox="0 0 24 24">
+      <path fill="#EA4335" d="M12 12 3.34 7a10 10 0 0 1 17.32 0z"/>
+      <path fill="#34A853" d="M12 12v10A10 10 0 0 1 3.34 7z"/>
+      <path fill="#FBBC05" d="M12 12 20.66 7A10 10 0 0 1 12 22z"/>
+      <circle cx="12" cy="12" r="5.4" fill="#fff"/>
+      <circle cx="12" cy="12" r="4.1" fill="#4285F4"/>
+    </symbol>
+  </defs>
+</svg>
+
 <header>
   <div class="wrap nav">
     <a class="brand" href="#top">
       <span class="mark" aria-hidden="true"><svg viewBox="137 93 238 326" fill="none"><path d="M168 170 V300 A88 88 0 0 0 344 300 V124" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      Uplit - An Upwork chrome extension
+      Uplit - An Upwork Extension
     </a>
     <nav class="nav-links">
       <a href="#compare">Compare</a>
       <a href="#try">Try it</a>
       <a href="#signals">Signals</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary">Download</a>
+      <a href="https://microsoftedge.microsoft.com/addons/detail/llenhmhepcodapocdneaailhbppgchkl"
+         class="btn btn-edge" rel="noopener">
+        <svg width="17" height="17" aria-hidden="true"><use href="#edgeMark"/></svg>
+        Add to Edge
+      </a>
     </nav>
   </div>
 </header>
@@ -373,17 +462,21 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
     <div class="wrap">
       <h1>Review more jobs <br class="h1-brk"> <span class="grad">in less time.</span></h1>
       <p class="sub">
-        Hire rate, total spend, reviews and the JSS they require — pinned to the top of every
+        Hire rate, total spend, reviews and the JSS they require, pinned to the top of every
         Upwork search result, before you click anything.
       </p>
       <div class="cta">
-        <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download for Chrome
+        <a href="https://microsoftedge.microsoft.com/addons/detail/llenhmhepcodapocdneaailhbppgchkl"
+           class="btn btn-edge btn-lg" rel="noopener">
+          <svg width="19" height="19" aria-hidden="true"><use href="#edgeMark"/></svg>
+          Add to Edge
         </a>
-        <a href="#try" class="btn btn-ghost btn-lg">Try the filters</a>
+        <a href="#install" class="btn btn-ghost btn-lg">
+          <svg width="18" height="18" aria-hidden="true"><use href="#chromeMark"/></svg>
+          Chrome: install manually
+        </a>
       </div>
-      <p class="microcopy">No account. No servers. Nothing leaves upwork.com.</p>
+      <p class="microcopy">One click on Edge. No account. No servers. Nothing leaves upwork.com.</p>
 
       <!-- before / after -->
       <div class="cmp-wrap rv">
@@ -412,7 +505,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
       <div class="sec-head rv">
         <div class="kicker">Live demo</div>
         <h2>Ten filters. One pass.</h2>
-        <p>This panel is real — change anything and press Apply. It runs the same rules the extension does, including the fail-open behaviour: a signal a client never published won't hide their job.</p>
+        <p>This panel is real. Change anything and press Apply. It runs the same rules the extension does, including the fail-open behaviour: a signal a client never published won't hide their job.</p>
       </div>
 
       <div class="play rv">
@@ -440,7 +533,12 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
             </div>
             <div>
               <div class="p-group-title">Job</div>
-              <div class="p-row"><label for="d-age">Max age</label><input type="number" id="d-age" placeholder="any hrs" min="0"></div>
+              <div class="p-row"><label for="d-age">Max age</label>
+                <span class="p-pair">
+                  <input type="number" id="d-age" placeholder="any" min="0">
+                  <select id="d-age-unit" aria-label="Max age unit"><option value="min">min</option><option value="hr" selected>hrs</option></select>
+                </span>
+              </div>
               <div class="p-row"><label for="d-prop">Max proposals</label>
                 <select id="d-prop"><option value="">Any</option><option value="5">Under 5</option><option value="10">Under 10</option><option value="15">Under 15</option><option value="20">Under 20</option><option value="50">Under 50</option></select>
               </div>
@@ -453,11 +551,35 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
             </div>
             <div>
               <div class="p-group-title">Client</div>
-              <div class="p-row"><label for="d-spend">Min spend</label><input type="number" id="d-spend" placeholder="any $" min="0"></div>
-              <div class="p-row"><label for="d-rating">Min rating</label><input type="number" id="d-rating" placeholder="any /5" min="0" max="5" step="0.1"></div>
-              <div class="p-row"><label for="d-hire">Min hire rate</label><input type="number" id="d-hire" placeholder="any %" min="0" max="100"></div>
+              <div class="p-row">
+                <label for="d-spend-min" title="Big spenders reply less: $1-$1k replies at 8.15%, $500k+ at 3.85%. A band beats a minimum.">Client spend</label>
+                <span class="p-pair">
+                  <input type="number" id="d-spend-min" placeholder="min $" min="0" step="100">
+                  <input type="number" id="d-spend-max" placeholder="max $" min="0" step="100">
+                </span>
+              </div>
+              <div class="p-preset"><button type="button" id="d-spend-preset">Use $1k-$25k</button></div>
+              <div class="p-row"><label for="d-rating" title="Raises hire safety, lowers replies: under 3.5 stars replies at 13.11%, 4.8+ at 6.51%.">Min rating</label><input type="number" id="d-rating" placeholder="any /5" min="0" max="5" step="0.1"></div>
+              <div class="p-row">
+                <label for="d-hire">Min hire rate <span class="p-tag" title="No measured basis for any threshold: every citation traces to vendor opinion. Jobs posted is the real proxy: 1 job 5.83%, 6-10 jobs 7.50%.">unproven</span></label>
+                <input type="number" id="d-hire" placeholder="any %" min="0" max="100" step="5">
+              </div>
+              <div class="p-row"><label for="d-jobs">Min jobs posted</label><input type="number" id="d-jobs" placeholder="any" min="0" step="1"></div>
+              <div class="p-row"><label for="d-ctype">Client type</label>
+                <select id="d-ctype"><option value="">Any</option><option value="Individual">Individual</option><option value="Company">Company</option></select>
+              </div>
               <div class="p-row p-toggle"><label for="d-ver">Payment verified only</label>
                 <span class="sw"><input type="checkbox" id="d-ver"><i></i></span>
+              </div>
+            </div>
+            <div>
+              <div class="p-group-title">Insights</div>
+              <div class="p-row p-toggle"><label for="d-verdicts">Timing &amp; verdict on cards</label>
+                <span class="sw"><input type="checkbox" id="d-verdicts" checked><i></i></span>
+              </div>
+              <div class="p-row p-toggle">
+                <label for="d-explain" title="Dims the cards that do not match and prints the reason, instead of removing them.">Explain instead of hiding</label>
+                <span class="sw"><input type="checkbox" id="d-explain" checked><i></i></span>
               </div>
             </div>
           </div>
@@ -503,11 +625,11 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
       </div>
       <div class="grid rv">
         <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M4 6h16l-6 7.5V20l-4-2v-4.5z"/></svg></div>
-          <h3>Ten real filters</h3><p>Age, proposals, payment type, experience, spend, rating, hire rate, jobs posted, client type and payment-verified — combined, applied instantly.</p></div>
+          <h3>Ten real filters</h3><p>Age, proposals, payment type, experience, spend, rating, hire rate, jobs posted, client type and payment-verified. Combined, and applied instantly.</p></div>
         <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h8l-1 8 10-12h-8z"/></svg></div>
           <h3>No page reloads</h3><p>Proposal bands are read straight off the card, so narrowing your search never throws away the results you already loaded.</p></div>
         <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-          <h3>Keeps up with scrolling</h3><p>Infinite scroll, sorting, pagination and in-page navigation are all tracked — new jobs get enriched as they appear.</p></div>
+          <h3>Keeps up with scrolling</h3><p>Infinite scroll, sorting, pagination and in-page navigation are all tracked. New jobs get enriched as they appear.</p></div>
         <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
           <h3>Native by design</h3><p>Chips reuse Upwork's own badge component, so they inherit its light and dark themes rather than approximating them.</p></div>
         <div class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/></svg></div>
@@ -523,16 +645,46 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
     <div class="wrap">
       <div class="sec-head rv">
         <div class="kicker">Install</div>
-        <h2>Running in about a minute</h2>
-        <p>Load it unpacked while the Web Store listing is in progress.</p>
+        <h2>Two ways in</h2>
+        <p>On Edge it is one click from the store. On Chrome you load it yourself, because the Chrome Web Store listing is not published yet.</p>
       </div>
-      <div class="steps rv">
-        <div class="step"><h3>Download &amp; unzip</h3><p>Grab the latest <code class="inline">.zip</code> from Releases and extract it to a folder you'll keep.</p></div>
-        <div class="step"><h3>Load unpacked</h3><p>Open <code class="inline">chrome://extensions</code>, switch on <strong>Developer mode</strong>, then choose <strong>Load unpacked</strong> and select that folder.</p></div>
-        <div class="step"><h3>Open a search</h3><p>Go to any Upwork job search and click the Uplit icon. Chips fill in as cards scroll into view.</p></div>
-      </div>
-      <div style="text-align:center;margin-top:32px">
-        <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">Download the latest release</a>
+
+      <div class="paths rv">
+        <div class="path primary">
+          <div class="path-head">
+            <svg aria-hidden="true"><use href="#edgeMark"/></svg>
+            <h3>Microsoft Edge</h3>
+          </div>
+          <p class="lede">Published on Microsoft Edge Add-ons. Installs and updates itself.</p>
+          <ol>
+            <li>Open the Edge Add-ons listing.</li>
+            <li>Click <strong>Get</strong>, then confirm.</li>
+            <li>Go to any Upwork job search and click the Uplit icon.</li>
+          </ol>
+          <a href="https://microsoftedge.microsoft.com/addons/detail/llenhmhepcodapocdneaailhbppgchkl"
+             class="btn btn-edge btn-lg" rel="noopener">
+            <svg width="19" height="19" aria-hidden="true"><use href="#edgeMark"/></svg>
+            Add to Edge
+          </a>
+        </div>
+
+        <div class="path">
+          <div class="path-head">
+            <svg aria-hidden="true"><use href="#chromeMark"/></svg>
+            <h3>Chrome</h3>
+          </div>
+          <p class="lede">Load the release unpacked. You update it by repeating step 1.</p>
+          <ol>
+            <li>Download the latest <code class="inline">.zip</code> and unzip it to a folder you will keep.</li>
+            <li>Open <code class="inline">chrome://extensions</code> and switch on <strong>Developer mode</strong>.</li>
+            <li>Click <strong>Load unpacked</strong> and select that folder.</li>
+            <li>Go to any Upwork job search and click the Uplit icon.</li>
+          </ol>
+          <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-ghost btn-lg">
+            <svg width="18" height="18" aria-hidden="true"><use href="#chromeMark"/></svg>
+            Download the latest release
+          </a>
+        </div>
       </div>
     </div>
   </section>
@@ -566,8 +718,15 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
         <h2>Read fewer jobs. Win more of them.</h2>
         <p>Every connect you don't spend on a client who never hires is one you keep for a client who does.</p>
         <div class="cta">
-          <a href="https://github.com/akifejaz/docs-upcraft/releases/latest" class="btn btn-primary btn-lg">Download for Chrome</a>
-          <a href="https://github.com/akifejaz/docs-upcraft" class="btn btn-ghost btn-lg">View source</a>
+          <a href="https://microsoftedge.microsoft.com/addons/detail/llenhmhepcodapocdneaailhbppgchkl"
+             class="btn btn-edge btn-lg" rel="noopener">
+            <svg width="19" height="19" aria-hidden="true"><use href="#edgeMark"/></svg>
+            Add to Edge
+          </a>
+          <a href="#install" class="btn btn-ghost btn-lg">
+            <svg width="18" height="18" aria-hidden="true"><use href="#chromeMark"/></svg>
+            Chrome: install manually
+          </a>
         </div>
       </div>
     </div>
@@ -594,6 +753,7 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
       </div>
       <div class="foot-col">
         <h4>Get it</h4>
+        <a href="https://microsoftedge.microsoft.com/addons/detail/llenhmhepcodapocdneaailhbppgchkl" rel="noopener">Microsoft Edge Add-ons</a>
         <a href="https://github.com/akifejaz/docs-upcraft/releases/latest">Latest release</a>
         <a href="https://github.com/akifejaz/docs-upcraft/releases">All releases</a>
         <a href="#install">Install guide</a>
@@ -618,6 +778,10 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
   </div>
 </footer>
 
+<!-- The extension's own scorer, copied verbatim from the uplit repo so the demo
+     below runs the shipped rules rather than a paraphrase of them. Re-copy it
+     whenever research.js changes in the extension; nothing here detects drift. -->
+<script src="research.js"></script>
 <script>
 (function(){
   'use strict';
@@ -628,27 +792,36 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
      Real values captured from a live Upwork search while building
      the extension — not invented.
      ----------------------------------------------------------- */
+  /* `jobsPosted` and `client` mirror the Jobs Posted and Client chips below.
+     A job with no Client chip leaves `client` undefined on purpose: the Client
+     type filter must not hide a job whose type was never published. That is the
+     fail-open rule, and these two rows are what demonstrate it. */
   var JOBS = [
     { title:'Python Trajectory Analysis', ageH:2, prop:20, spend:1000, rating:5.0, verified:true,
-      type:'fixed', level:'intermediate', hire:100, terms:'Fixed price · Intermediate · Est. budget: $30.00',
+      type:'fixed', level:'intermediate', hire:100, jobsPosted:33, client:'Company',
+      terms:'Fixed price · Intermediate · Est. budget: $30.00',
       country:'China', tags:['Python','Data Science','Data Analysis'],
       chips:[['Jobs Posted','33'],['Hire Rate','100%'],['Member Since','Jan 14, 2019'],['Reviews','5.0 • 28 reviews'],['Client','Company']] },
     { title:'Experienced AI Developers & Prompt Engineers Wanted', ageH:2, prop:50, spend:10000, rating:5.0, verified:true,
-      type:'hourly', level:'expert', hire:12, terms:'Hourly · Expert · 3 to 6 months',
+      type:'hourly', level:'expert', hire:12, jobsPosted:85, client:'Company',
+      terms:'Hourly · Expert · 3 to 6 months',
       country:'USA', tags:['Python','MySQL','Django','GraphQL'],
       chips:[['Jobs Posted','85'],['Hire Rate','12%'],['Member Since','May 18, 2024'],['Reviews','5.0 • 2 reviews'],['Client','Company']] },
     { title:'Python Developer (AWS Cloud)', ageH:3, prop:10, spend:7000, rating:4.9, verified:true,
-      type:'fixed', level:'intermediate', hire:45, terms:'Fixed price · Intermediate · Est. budget: $1,000.00',
+      type:'fixed', level:'intermediate', hire:45, jobsPosted:134, client:'Company',
+      terms:'Fixed price · Intermediate · Est. budget: $1,000.00',
       country:'India', tags:['Python','Amazon EC2','AWS','DevOps'],
       chips:[['Jobs Posted','134'],['Hire Rate','45%'],['Member Since','Oct 25, 2017'],['Reviews','4.9 • 52 reviews'],['Client','Company'],['Hires','0'],['Last Viewed','1 hour ago']],
       quals:[['Needs JSS','90%+'],['Rising Talent','Yes'],['English','Fluent']] },
     { title:'QuickBooks Update Assistance', ageH:26, prop:15, spend:20000, rating:4.9, verified:true,
-      type:'hourly', level:'intermediate', hire:100, terms:'Hourly · Intermediate · Less than 1 month',
+      type:'hourly', level:'intermediate', hire:100, jobsPosted:10,
+      terms:'Hourly · Intermediate · Less than 1 month',
       country:'United States', tags:['Intuit QuickBooks','Bookkeeping'],
       chips:[['Jobs Posted','10'],['Hire Rate','100%'],['Member Since','May 23, 2017'],['Reviews','4.9 • 13 reviews'],['Last Viewed','yesterday']] },
     { title:'Scrapy Expert Needed for Data Pipeline', ageH:96, prop:50, spend:0, rating:0, verified:false,
-      type:'fixed', level:'entry', hire:0, terms:'Fixed price · Entry level · Est. budget: $80.00',
-      country:'—', tags:['Python','Scrapy','Web Scraping'],
+      type:'fixed', level:'entry', hire:0, jobsPosted:1,
+      terms:'Fixed price · Entry level · Est. budget: $80.00',
+      country:'Not given', tags:['Python','Scrapy','Web Scraping'],
       chips:[['Jobs Posted','1'],['Hire Rate','0%'],['Member Since','Jul 28, 2026'],['Hires','0']] }
   ];
 
@@ -661,12 +834,40 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
     : (s >= 1000 ? '$' + Math.round(s/1000) + 'K+ spent' : '$' + s + ' spent'); }
   function stars(r){ return r ? '★★★★★'.slice(0, Math.max(1, Math.round(r))) : ''; }
 
-  function cardHTML(j, i, withChips){
+  /* The verdict row runs research.js itself, the same file the extension ships,
+     rather than a copy of its rules. That is what lets the section above claim
+     the panel "runs the same rules the extension does" without it being a
+     half-truth. If UplitResearch is missing the row is omitted, so the page
+     still works with the script absent. */
+  var R = window.UplitResearch || null;
+
+  function verdictHTML(j){
+    if (!R) return '';
+    var v = R.score({
+      ageMinutes: j.ageH * 60, proposalsFloor: j.prop, spendUsd: j.spend,
+      rating: j.rating || undefined, jobsPosted: j.jobsPosted,
+      paymentVerified: j.verified, title: j.title
+    });
+    var age = R.postAgeBand(j.ageH * 60);
+    var out = '<div class="vd"><span class="vd-band vd-' + esc(v.band) + '">' + esc(v.band) + '</span>';
+    if (age) out += '<span class="vd-chip vd-tone-' + esc(age.tone) + '">' + esc(age.label) + '</span>';
+    v.hardStops.slice(0, 2).forEach(function(s){
+      out += '<span class="vd-chip vd-tone-bad" title="' + esc(s.detail) + '">' + esc(s.text) + '</span>';
+    });
+    if (v.unknowns.length) {
+      out += '<span class="vd-chip vd-unknown">' + v.unknowns.length + ' signal' +
+             (v.unknowns.length > 1 ? 's' : '') + ' unavailable</span>';
+    }
+    return out + '</div>';
+  }
+
+  function cardHTML(j, i, withChips, withVerdict){
     var chips = '<div class="chips">' +
       j.chips.map(function(c){ return '<span class="chip"><b>' + esc(c[0]) + ':</b> ' + esc(c[1]) + '</span>'; }).join('') +
       (j.quals ? j.quals.map(function(c){ return '<span class="chip qual"><b>' + esc(c[0]) + ':</b> ' + esc(c[1]) + '</span>'; }).join('') : '') +
       '</div>';
     return '<div class="job" data-i="' + i + '">' + (withChips ? chips : '') +
+      (withVerdict ? verdictHTML(j) : '') +
       '<div class="job-meta">' + ageLabel(j.ageH) + ' &middot; Proposals: ' + propLabel(j.prop) + '</div>' +
       '<div class="job-title">' + esc(j.title) + '</div>' +
       '<div class="job-row">' +
@@ -685,8 +886,8 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
      genuinely like-for-like.
      ---------------------------------------------------- */
   var CMP = [JOBS[0], JOBS[1]];
-  $('paneBefore').innerHTML = CMP.map(function(j,i){ return cardHTML(j,i,false); }).join('');
-  $('paneAfter').innerHTML  = CMP.map(function(j,i){ return cardHTML(j,i,true);  }).join('');
+  $('paneBefore').innerHTML = CMP.map(function(j,i){ return cardHTML(j,i,false,false); }).join('');
+  $('paneAfter').innerHTML  = CMP.map(function(j,i){ return cardHTML(j,i,true,true);   }).join('');
 
   /* ================= REVIEWS =================
      ADD REAL QUOTES ONLY. Every entry is a statement attributed to a named
@@ -856,16 +1057,22 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
 
   function render(){
     var withChips = $('d-details').checked;
-    list.innerHTML = JOBS.map(function(j,i){ return cardHTML(j,i,withChips); }).join('');
+    var withVerdict = $('d-verdicts').checked;
+    list.innerHTML = JOBS.map(function(j,i){ return cardHTML(j,i,withChips,withVerdict); }).join('');
   }
 
-  // Mirrors the extension: a value the card doesn't publish never hides the job.
+  /* Mirrors the extension's jobMatches(): a value the card never published can
+     never hide the job. Every test is guarded on the value being readable
+     first, which is why `undefined` client type and a 0 rating fall through. */
   function matches(j, f){
-    if (f.age    !== null && j.ageH   > f.age)    return false;
-    if (f.prop   !== null && j.prop   > f.prop)   return false;
-    if (f.spend  !== null && j.spend  < f.spend)  return false;
-    if (f.rating !== null && j.rating < f.rating) return false;
-    if (f.hire   !== null && j.hire   < f.hire)   return false;
+    if (f.ageMin   !== null && j.ageH * 60 > f.ageMin)  return false;
+    if (f.prop     !== null && j.prop      > f.prop)    return false;
+    if (f.spendMin !== null && j.spend     < f.spendMin) return false;
+    if (f.spendMax !== null && j.spend     > f.spendMax) return false;
+    if (f.rating   !== null && j.rating    < f.rating)  return false;
+    if (f.hire     !== null && j.hire      < f.hire)    return false;
+    if (f.jobs     !== null && j.jobsPosted < f.jobs)   return false;
+    if (f.ctype && j.client && j.client !== f.ctype) return false;
     if (f.type  && j.type  !== f.type)  return false;
     if (f.level && j.level !== f.level) return false;
     if (f.ver && !j.verified) return false;
@@ -873,28 +1080,52 @@ footer{border-top:1px solid var(--line);padding:52px 0 30px;margin-top:36px}
   }
   function num(id){ var v = $(id).value; return v === '' ? null : parseFloat(v); }
 
+  function readFilters(){
+    var age = num('d-age');
+    return {
+      // The extension stores one age value plus a unit; normalise to minutes.
+      ageMin: age === null ? null : ($('d-age-unit').value === 'hr' ? age * 60 : age),
+      prop:num('d-prop'), spendMin:num('d-spend-min'), spendMax:num('d-spend-max'),
+      rating:num('d-rating'), hire:num('d-hire'), jobs:num('d-jobs'),
+      ctype:$('d-ctype').value, type:$('d-type').value, level:$('d-level').value,
+      ver:$('d-ver').checked
+    };
+  }
+
   function apply(){
-    var f = { age:num('d-age'), prop:num('d-prop'), spend:num('d-spend'),
-              rating:num('d-rating'), hire:num('d-hire'),
-              type:$('d-type').value, level:$('d-level').value, ver:$('d-ver').checked };
+    var f = readFilters();
+    var explain = $('d-explain').checked;
     var shown = 0;
     Array.prototype.forEach.call(list.children, function(node){
       var ok = matches(JOBS[+node.dataset.i], f);
-      node.classList.toggle('is-dim', !ok);
+      // Explain dims and keeps the card; otherwise it is removed outright.
+      node.classList.toggle('is-dim', !ok && explain);
+      node.classList.toggle('is-hidden', !ok && !explain);
       if (ok) shown++;
     });
-    $('pStats').innerHTML = '<b>' + shown + '</b> shown &middot; <b>' + (JOBS.length - shown) + '</b> hidden';
+    var gone = JOBS.length - shown;
+    $('pStats').innerHTML = '<b>' + shown + '</b> shown &middot; <b>' + gone + '</b> ' +
+      (explain ? 'flagged' : 'hidden');
     $('pCount').textContent = shown + '/' + JOBS.length;
     $('liveCount').textContent = shown + ' of ' + JOBS.length + ' results';
   }
   function reset(){
-    ['d-age','d-prop','d-spend','d-rating','d-hire','d-type','d-level'].forEach(function(id){ $(id).value = ''; });
+    ['d-age','d-prop','d-spend-min','d-spend-max','d-rating','d-hire','d-jobs','d-ctype','d-type','d-level']
+      .forEach(function(id){ $(id).value = ''; });
+    $('d-age-unit').value = 'hr';
     $('d-ver').checked = false; apply();
   }
 
   $('dApply').addEventListener('click', apply);
   $('dReset').addEventListener('click', reset);
   $('d-details').addEventListener('change', function(){ render(); apply(); });
+  $('d-verdicts').addEventListener('change', function(){ render(); apply(); });
+  $('d-explain').addEventListener('change', apply);
+  // The measured band, offered as a preset because reply rate falls as client
+  // spend rises. Matches #uc-spend-preset in the extension.
+  $('d-spend-preset').addEventListener('click', function(){
+    $('d-spend-min').value = '1000'; $('d-spend-max').value = '25000'; apply();
+  });
   document.querySelector('.panel').addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); apply(); }
   });
